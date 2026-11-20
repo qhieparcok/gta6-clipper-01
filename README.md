@@ -1,5 +1,11 @@
 # GTA 6 Clipper — make.fun bounty entry (gta6-clipper-01)
 
+[![make.fun · gta6-clipper-01](https://make.fun/badge/gta6-clipper-01.svg)](https://make.fun/bounty/gta6-clipper-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-clipper-01)
+[![rank](https://make.fun/badge/gta6-clipper-01/qhieparcok/gta6-clipper-01/rank.svg)](https://make.fun/bounty/gta6-clipper-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-clipper-01)
+[![reward](https://make.fun/badge/gta6-clipper-01/qhieparcok/gta6-clipper-01/reward.svg)](https://make.fun/bounty/gta6-clipper-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-clipper-01)
+
+Entered in the [make.fun bounty "Clip GTA 6 for the most YouTube views"](https://make.fun/bounty/gta6-clipper-01) ($500 pot, deadline 23 Nov 2026).
+
 A vertical Short cut from Rockstar's **Grand Theft Auto VI Trailer 2**,
 built for the make.fun bounty **"Clip GTA 6 for the most YouTube views"**
 ($500 pot, deadline 23 Nov 2026). The clip hooks with the trailer's most
