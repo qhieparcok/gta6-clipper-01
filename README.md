@@ -54,6 +54,26 @@ It cuts the seven moments above, reframes each to vertical 9:16 with a
 per-shot crop (see `SEGMENTS` in `main.ts`), appends the end card, burns in
 the captions, and writes a faststart H.264 + AAC mp4.
 
+## Harness mode vs full build
+
+`main.ts` always does Step 0 first, before anything else: it copies
+`VIDEO.json` from `$MAKEFUN_BOT_DIR` (default `/bot`, falling back to the
+copy next to the script if that directory has no `VIDEO.json`) to
+`$MAKEFUN_OUTPUT_DIR/VIDEO.json` (default `/output`, created if needed),
+byte-exact, using only the Node standard library. `VIDEO.json` carries
+the entry link under the `url` key, per the harness contract. Step 0
+needs no ffmpeg and no network, and a failed copy exits non-zero — the
+gate needs this file.
+
+- **Harness mode** (no source trailer present, e.g. the house's sandbox):
+  after Step 0 the script logs that the clip build is skipped and exits 0.
+  It never fails for a missing source trailer. Two runs write the same
+  bytes to `$MAKEFUN_OUTPUT_DIR/VIDEO.json`, as the resolution criteria
+  require. (The harness wall budget is 60 s; only Step 0 runs inside it.)
+- **Full build mode** (source trailer present): after Step 0 the script
+  builds `clip-v1.mp4` exactly as above. The Step 0 copy is harmless here
+  — it just also leaves `$MAKEFUN_OUTPUT_DIR/VIDEO.json` in place.
+
 ## Files
 
 - `main.ts` — the builder (edit the `SEGMENTS` / `CAPTIONS` tables to re-cut)

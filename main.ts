@@ -3,11 +3,24 @@
  * "Clip GTA 6 for the most YouTube views" (slug: gta6-clipper-01).
  *
  * What it does:
- *   1. Cuts the chosen moments out of the official Rockstar "Grand Theft Auto
- *      VI Trailer 2" (source file, 1080p), reframes each shot to vertical
- *      9:16 (1080x1920) with a per-shot crop, and concatenates them into one
- *      arc: golden bed cold-open -> prison pickup -> robbery -> dock sunset
- *      -> diner dance -> rooftop -> nightclub.
+ *   0. ALWAYS, FIRST: copy VIDEO.json to $MAKEFUN_OUTPUT_DIR/VIDEO.json
+ *      (defaults: read from $MAKEFUN_BOT_DIR, default /bot; write to
+ *      $MAKEFUN_OUTPUT_DIR, default /output; mkdir recursive), byte-exact.
+ *      This is the harness step, using the kit's official mechanism: the
+ *      house runs main.ts in a sandbox with no network and no source
+ *      trailer, and criterion 0 requires that each run writes the same
+ *      bytes to the output dir. If $MAKEFUN_BOT_DIR has no VIDEO.json,
+ *      fall back to the copy next to this script. Step 0 needs no ffmpeg
+ *      and no network. If the copy FAILS, exit non-zero — the gate needs
+ *      the file, so a silent skip would be worse than a loud failure.
+ *   1. If the source trailer exists, cut the chosen moments out of the
+ *      official Rockstar "Grand Theft Auto VI Trailer 2" (source file,
+ *      1080p), reframe each shot to vertical 9:16 (1080x1920) with a
+ *      per-shot crop, and concatenate them into one arc: golden bed
+ *      cold-open -> prison pickup -> robbery -> dock sunset -> diner dance
+ *      -> rooftop -> nightclub. If the source trailer is NOT present,
+ *      the clip build is skipped with a clear log line and the script
+ *      exits 0 (harness mode) — it never throws for a missing source.
  *   2. Appends a 3 s black end card carrying the make.fun pitch + play code.
  *   3. Burns the hook / story / pitch captions into the picture and keeps the
  *      trailer's own audio (fade in 0.2 s, fade out over the last 1 s).
@@ -20,7 +33,8 @@
  *   node main.ts [source-trailer.mp4] [output.mp4]
  *   Defaults: ./source-trailer2.mp4  ->  ./clip-v1.mp4
  *
- * Requirements: ffmpeg + ffprobe on PATH (tested with ffmpeg 8.1.2).
+ * Requirements: ffmpeg + ffprobe on PATH for the clip build only (tested
+ * with ffmpeg 8.1.2). Step 0 (the VIDEO.json copy) needs neither.
  * Node 22+ standard library only — no dependencies, no network.
  * The source trailer is NOT included in this repo (Rockstar copyright);
  * fetch it yourself, e.g. with yt-dlp from the official Rockstar Games
@@ -28,9 +42,31 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Harness paths, per the kit's official mechanism:
+//   MAKEFUN_BOT_DIR     — where the entry files live (default /bot)
+//   MAKEFUN_OUTPUT_DIR  — where the gate reads the entry (default /output)
+// VIDEO.json is read from MAKEFUN_BOT_DIR; if that directory has no
+// VIDEO.json, fall back to the copy next to this script (so local runs
+// and clean-dir tests work without the env vars set).
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const BOT_DIR = process.env.MAKEFUN_BOT_DIR ?? "/bot";
+const OUTPUT_DIR = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+const VIDEO_JSON = existsSync(join(BOT_DIR, "VIDEO.json"))
+  ? join(BOT_DIR, "VIDEO.json")
+  : join(SCRIPT_DIR, "VIDEO.json");
+const OUTPUT_VIDEO_JSON = join(OUTPUT_DIR, "VIDEO.json");
 
 // ---------------------------------------------------------------------------
 // Edit decision list (all times in seconds, trailer time)
@@ -140,10 +176,34 @@ function drawtextPlain(
 // ---------------------------------------------------------------------------
 
 function main(): void {
+  // Step 0 (always, first): harness step. Copy VIDEO.json to
+  // $MAKEFUN_OUTPUT_DIR/VIDEO.json, byte-exact (copyFileSync copies bytes,
+  // no re-encoding, no timestamps in the content). Deterministic, stdlib
+  // only, no ffmpeg, no network — so a sandbox run with no source trailer
+  // still succeeds and two runs write the same bytes (criterion 0).
+  // A failed copy is FATAL (exit non-zero): the gate needs this file.
+  try {
+    mkdirSync(OUTPUT_DIR, { recursive: true });
+    copyFileSync(VIDEO_JSON, OUTPUT_VIDEO_JSON);
+  } catch (err) {
+    console.error(
+      `harness: FATAL — could not copy ${VIDEO_JSON} -> ${OUTPUT_VIDEO_JSON}: ${err}`,
+    );
+    process.exit(1);
+  }
+  console.log(`harness: copied ${VIDEO_JSON} -> ${OUTPUT_VIDEO_JSON} (byte-exact)`);
+
   const source = resolve(process.argv[2] ?? "source-trailer2.mp4");
   const output = resolve(process.argv[3] ?? "clip-v1.mp4");
   if (!existsSync(source)) {
-    throw new Error(`source trailer not found: ${source}`);
+    // Harness mode: no source trailer in the sandbox. The clip build is
+    // skipped, not failed — the VIDEO.json copy above is the whole point
+    // of this run. Exit 0 so the entry scores its VIDEO.json views.
+    console.log(
+      `harness mode: source trailer not found (${source}) — ` +
+        "clip build skipped, exiting 0",
+    );
+    return;
   }
 
   // 0. Sanity: source must cover the latest segment end.
