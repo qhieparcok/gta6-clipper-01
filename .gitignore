@@ -1,0 +1,8 @@
+# Source trailer (Rockstar copyright, fetched separately — see README.md)
+source-trailer2.mp4
+source-trailer2.info.json
+# Working files, not part of the repo
+analysis/
+clip-v1.mp4
+*.part
+*.ytdl
